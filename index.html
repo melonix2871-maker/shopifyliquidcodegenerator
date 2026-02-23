@@ -199,7 +199,6 @@
     }
     #send-btn:disabled { background: #777; cursor:not-allowed; }
 
-    /* Code blocks */
     pre, code {
       background: rgba(0,0,0,0.06);
       padding: 10px 12px;
@@ -306,7 +305,6 @@
 </div>
 
 <script type="module">
-  // WebLLM TinyLlama pinned import
   import { MLCEngine } from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.80/+esm";
 
   const MODEL_ID = "TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC";
@@ -326,7 +324,6 @@
   let generating = false;
 
   // Captured generated files (from assistant)
-  // Map<path, content>
   const fileMap = new Map();
 
   function updateFileCount(){
@@ -380,7 +377,6 @@ When you want exportable files, ask:
 **"Output as files"**`);
   });
 
-  // ---------- Shopify Brain (system prompt) ----------
   function systemMessage(){
     return {
       role: "system",
@@ -413,7 +409,6 @@ If user requests "output as files", always produce the necessary file blocks.
 
   let messages = [ systemMessage() ];
 
-  // ---------- Chat helpers ----------
   function addMessage(role, content){
     const div = document.createElement("div");
     div.className = `message ${role}`;
@@ -421,7 +416,7 @@ If user requests "output as files", always produce the necessary file blocks.
     chatContainer.appendChild(div);
     chatContainer.scrollTop = chatContainer.scrollHeight;
     enhanceCodeBlocks(div);
-    captureFilesFromNode(div);
+    updateFileCount();
     return div;
   }
 
@@ -429,29 +424,21 @@ If user requests "output as files", always produce the necessary file blocks.
     statusEl.textContent = text;
   }
 
-  // ---------- File capture ----------
+  // ---------- FILE CAPTURE (robust) ----------
+  // Captures from raw assistant text while streaming + on completion.
   function captureFilesFromText(text){
-    // Look for code fences that begin with: ```file: path
-    // and capture until closing ```
     const re = /```file:\s*([^\n\r]+)\s*[\r\n]+([\s\S]*?)```/g;
-    let m;
-    let count = 0;
+    let m, count = 0;
     while((m = re.exec(text)) !== null){
-      const path = (m[1] || "").trim();
-      const body = (m[2] || "").replace(/\s+$/,""); // trim end
-      if(path && body){
+      const path = (m[1] || "").trim().replace(/^\/+/, "");
+      const body = (m[2] || "").replace(/\s+$/,"");
+      if(path){
         fileMap.set(path, body);
         count++;
       }
     }
     if(count) updateFileCount();
-  }
-
-  function captureFilesFromNode(container){
-    // marked creates <pre><code> blocks; we'll re-read raw markdown from them is hard,
-    // so we also capture from the assistant's plain text while streaming (handled there).
-    // Here we only keep count UI in sync.
-    updateFileCount();
+    return count;
   }
 
   // ---------- Code box enhancer ----------
@@ -465,10 +452,6 @@ If user requests "output as files", always produce the necessary file blocks.
       const langClass = Array.from(code.classList).find(c => c.startsWith("language-"));
       const lang = langClass ? langClass.replace("language-","").toUpperCase() : "CODE";
 
-      // file header sniff for convenience
-      const firstLine = src.split("\n")[0] || "";
-      const fileHint = firstLine.startsWith("file:") ? firstLine.slice(5).trim() : "";
-
       const wrap = document.createElement("div");
       wrap.className = "codebox";
 
@@ -476,7 +459,7 @@ If user requests "output as files", always produce the necessary file blocks.
       header.className = "codebox-header";
 
       const left = document.createElement("div");
-      left.innerHTML = `<strong>${lang}</strong>${fileHint ? ` <span class="muted">• ${fileHint}</span>` : ""}`;
+      left.innerHTML = `<strong>${lang}</strong>`;
 
       const actions = document.createElement("div");
       actions.className = "codebox-actions";
@@ -597,7 +580,6 @@ Tip: say **"Output as files"** to get exportable ZIP-ready file blocks.`);
 
   lowVramEl.addEventListener("change", ()=>{
     if(generating) return;
-    // reload with new opts
     loadModel();
   });
 
@@ -631,16 +613,20 @@ Tip: say **"Output as files"** to get exportable ZIP-ready file blocks.`);
           const delta = chunk?.choices?.[0]?.delta?.content ?? "";
           if(!delta) continue;
           fullText += delta;
+
+          // stream render
           replyDiv.innerHTML = marked.parse(fullText);
           chatContainer.scrollTop = chatContainer.scrollHeight;
+
+          // continuously capture any completed file blocks
+          captureFilesFromText(fullText);
         }
 
         messages.push({ role:"assistant", content: fullText });
         enhanceCodeBlocks(replyDiv);
 
-        // capture files (ZIP exporter uses these)
+        // final capture
         captureFilesFromText(fullText);
-
       } else {
         replyDiv.textContent = "WebGPU not available. Use a WebGPU-capable browser/device.";
       }
@@ -656,28 +642,61 @@ Tip: say **"Output as files"** to get exportable ZIP-ready file blocks.`);
     userInput.focus();
   }
 
-  // ---------- Export ZIP ----------
-  exportBtn.addEventListener("click", async ()=>{
+  // ---------- Base64 ZIP Export (NO server) ----------
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read ZIP blob"));
+      reader.onload = () => {
+        const dataUrl = String(reader.result || "");
+        const base64 = dataUrl.split(",")[1] || "";
+        resolve(base64);
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function exportZipAsBase64(zipName = "shopify-theme.zip"){
     if(fileMap.size === 0){
       alert("No files captured yet.\n\nAsk the assistant: “Output as files …” so it produces ```file: path``` blocks.");
       return;
     }
+
+    // Ensure we capture all file blocks visible in the chat HTML too (as backup)
+    // (Main source is raw streamed text; this is extra safety.)
+    const allText = chatContainer.innerText || "";
+    captureFilesFromText(allText);
+
+    const zip = new JSZip();
+    for(const [path, content] of fileMap.entries()){
+      const cleanPath = String(path || "").replace(/^\/+/, "");
+      zip.file(cleanPath, content == null ? "" : String(content));
+    }
+
+    setStatus(`Exporting ZIP… (${fileMap.size} files)`);
+    const blob = await zip.generateAsync({ type:"blob" });
+    const base64 = await blobToBase64(blob);
+
+    // Trigger download with Base64 data URL (no server)
+    const dataUrl = `data:application/zip;base64,${base64}`;
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = zipName;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setStatus(`Downloaded ZIP (${fileMap.size} files) ✅`);
+    return base64;
+  }
+
+  exportBtn.addEventListener("click", async ()=>{
     try{
-      const zip = new JSZip();
-      for(const [path, content] of fileMap.entries()){
-        zip.file(path, content);
-      }
-      const blob = await zip.generateAsync({ type:"blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "shopify-theme.zip";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await exportZipAsBase64("shopify-theme.zip");
     }catch(e){
       alert("Export failed: " + (e?.message || String(e)));
+      setStatus("Export failed.");
     }
   });
 
