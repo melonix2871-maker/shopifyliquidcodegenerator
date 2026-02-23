@@ -1,939 +1,690 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Shopify Theme Code Generator Wizard (Full)</title>
+  <title>Shopify Assistant (TinyLlama)</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    :root{
-      --bg:#f4f4f4; --card:#fff; --text:#111827; --muted:#6b7280;
-      --brand:#007bff; --ok:#28a745; --warn:#ffc107; --border:#e5e7eb;
-      --shadow:0 2px 12px rgba(0,0,0,0.12);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    :root {
+      --bg: #0d1117;
+      --text: #c9d1d9;
+      --user-bg: #238636;
+      --bot-bg: #30363d;
+      --input-bg: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --header-bg: #010409;
+      --status-bg: #165a24;
+      --btn-text: #ffffff;
+      --dot: rgba(255,255,255,0.25);
+      --danger: #ef4444;
+      --warn: #f59e0b;
     }
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:var(--bg); color:var(--text); }
-    header { background:var(--brand); color:#fff; padding:16px; text-align:center; }
-    nav { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:12px 0 0; }
-    nav a{
-      color:#fff; text-decoration:none; cursor:pointer; font-weight:600;
-      padding:8px 10px; border-radius:8px; background:rgba(255,255,255,.12);
+    :root[data-theme="light"] {
+      --bg: #ffffff;
+      --text: #1f2937;
+      --user-bg: #e6ffed;
+      --bot-bg: #f3f4f6;
+      --input-bg: #f3f4f6;
+      --border: #d1d5db;
+      --accent: #2563eb;
+      --header-bg: #f9fafb;
+      --status-bg: #b8f3c4;
+      --btn-text: #ffffff;
+      --dot: rgba(0,0,0,0.18);
+      --danger: #dc2626;
+      --warn: #d97706;
     }
-    nav a.active{ background:rgba(255,255,255,.22); text-decoration:underline; }
-    #content { max-width: 980px; margin: 20px auto; padding: 20px; background:var(--card); border-radius: 12px; box-shadow: var(--shadow); }
-    .wizard-page { display:none; }
-    .wizard-page.active { display:block; }
-    form { display:flex; flex-direction:column; gap:12px; }
-    label { font-weight:700; margin-top:8px; }
-    .hint{ font-size:13px; color:var(--muted); margin-top:-6px; }
-    input, select, textarea {
-      padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px;
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', system-ui, sans-serif;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+      background-size: 15px 15px;
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    textarea{ font-family:inherit; }
-    .row{ display:flex; gap:12px; flex-wrap:wrap; }
-    .row > div{ flex:1 1 260px; }
-    button { background: var(--ok); color:#fff; border:none; padding: 12px; cursor:pointer; border-radius: 8px; font-size: 15px; margin-top: 10px; font-weight:700; }
-    button:hover { filter:brightness(.95); }
-    .btn-warn{ background:var(--warn); color:#111; }
-    .btn-warn:hover{ filter:brightness(.95); }
-    #output-container { margin-top: 18px; border-top:1px solid var(--border); padding-top: 15px; }
-    .file-meta{
-      display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
-      padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fafafa;
-      margin-bottom:10px;
+
+    header {
+      padding: 12px 16px;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    .file-meta code{ font-family:var(--mono); font-size:13px; }
-    pre#code-output {
-      width: 100%; min-height: 320px; font-family: var(--mono);
-      background:#0b1020; color:#e5e7eb; padding: 14px; border-radius: 12px; white-space: pre; overflow:auto;
-      border:1px solid rgba(255,255,255,.08);
+
+    h1 { margin: 0; font-size: 1.2rem; display:flex; align-items:center; gap:10px; }
+    .badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--input-bg);
+      color: var(--text);
+      font-weight: 600;
     }
-    #instructions {
-      margin-top: 12px; background: #e9f7ef; padding: 12px; border-radius: 10px; border-left: 5px solid var(--ok);
-      white-space: pre-wrap;
+
+    .header-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+
+    #status {
+      padding: 10px 14px;
+      background: var(--status-bg);
+      color: var(--text);
+      text-align: center;
+      font-size: 0.92rem;
+      border-bottom: 1px solid var(--border);
     }
-    .chiprow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-    .chip{
-      background:#f3f4f6; border:1px solid var(--border); padding:6px 8px; border-radius:999px; font-size:12px;
+
+    #toolbar {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--header-bg);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content: space-between;
     }
-    .divider{ height:1px; background:var(--border); margin:16px 0; }
+    .toolbar-left, .toolbar-right { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+    .btn {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: inherit;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      line-height: 1;
+    }
+    .btn:hover { filter: brightness(1.03); }
+    .btn-primary {
+      background: var(--accent);
+      border-color: transparent;
+      color: var(--btn-text);
+    }
+    .btn-warn { background: var(--warn); border-color: transparent; color: #111; }
+    .btn-danger { background: var(--danger); border-color: transparent; color: #fff; }
+
+    .pill {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      line-height: 1.48;
+      word-break: break-word;
+    }
+    .user {
+      align-self: flex-end;
+      background: var(--user-bg);
+      border-bottom-right-radius: 4px;
+    }
+    .assistant {
+      align-self: flex-start;
+      background: var(--bot-bg);
+      border-bottom-left-radius: 4px;
+    }
+
+    #input-area {
+      padding: 12px 16px;
+      background: var(--header-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items:flex-end;
+    }
+    #user-input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      resize: none;
+      min-height: 46px;
+      max-height: 180px;
+      font-family: inherit;
+    }
+    #send-btn {
+      height: 46px;
+      padding: 0 16px;
+      background: var(--accent);
+      color: var(--btn-text);
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      min-width: 56px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    #send-btn:disabled { background: #777; cursor:not-allowed; }
+
+    /* Code blocks */
+    pre, code {
+      background: rgba(0,0,0,0.06);
+      padding: 10px 12px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    :root[data-theme="dark"] pre, :root[data-theme="dark"] code { background: rgba(255,255,255,0.06); }
+
+    .codebox {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--input-bg);
+      margin-top: 8px;
+    }
+    .codebox-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text);
+      gap: 10px;
+    }
+    .codebox-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .codebox-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: var(--header-bg);
+      color: var(--text);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .codebox pre { margin: 0; }
+
+    .muted { opacity: 0.8; font-size: 12px; }
+
+    @media (max-width: 768px) {
+      #chat-container { padding: 10px; }
+      .message { max-width: 94%; }
+      #toolbar { gap: 8px; }
+      .btn { padding: 8px 10px; border-radius: 10px; }
+      h1 { font-size: 1.05rem; }
+    }
   </style>
 </head>
+
 <body>
+
 <header>
-  <h1>Shopify Theme Code Generator Wizard (Full Theme Ready)</h1>
-  <nav>
-    <a onclick="navigate('theme')">layout/theme.liquid</a>
-    <a onclick="navigate('template')">templates (JSON)</a>
-    <a onclick="navigate('section')">sections</a>
-    <a onclick="navigate('snippet')">snippets</a>
-    <a onclick="navigate('cart')">cart drawer</a>
-    <a onclick="navigate('metafields')">metafields helper</a>
-  </nav>
+  <h1>
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:var(--input-bg);border:1px solid var(--border);">
+      🤖
+    </span>
+    Shopify Assistant
+    <span class="badge">TinyLlama • WebLLM</span>
+  </h1>
+
+  <div class="header-right">
+    <label class="pill" style="display:flex; align-items:center; gap:8px;">
+      <input type="checkbox" id="low-vram" />
+      Low VRAM
+    </label>
+
+    <button id="theme-toggle" class="btn" title="Toggle theme">🌓 Theme</button>
+    <button id="reset-chat" class="btn btn-danger" title="Reset chat">♻ Reset</button>
+  </div>
 </header>
 
-<div id="content">
+<div id="status">Loading TinyLlama… (first download can take a while)</div>
 
-  <!-- THEME.LIQUID -->
-  <div id="theme-page" class="wizard-page">
-    <h2>layout/theme.liquid Wizard</h2>
-    <form id="theme-form">
-      <div class="row">
-        <div>
-          <label>Theme base:</label>
-          <select id="theme-base">
-            <option value="dawnlike" selected>Dawn-like (recommended)</option>
-            <option value="minimal">Minimal</option>
-          </select>
-          <div class="hint">Generates a complete layout with header/footer section groups, a11y, and global assets.</div>
-        </div>
-        <div>
-          <label>Assets to include:</label>
-          <div class="chiprow">
-            <label class="chip"><input type="checkbox" id="theme-css" checked> base.css</label>
-            <label class="chip"><input type="checkbox" id="theme-js" checked> global.js</label>
-            <label class="chip"><input type="checkbox" id="theme-favicon"> favicon</label>
-          </div>
-        </div>
-      </div>
-
-      <label>Optional features:</label>
-      <div class="chiprow">
-        <label class="chip"><input type="checkbox" id="feat-predictive"> Predictive search markup</label>
-        <label class="chip"><input type="checkbox" id="feat-localization"> Localization picker placeholder</label>
-        <label class="chip"><input type="checkbox" id="feat-announcement"> Announcement bar section slot</label>
-        <label class="chip"><input type="checkbox" id="feat-cart-drawer" checked> Cart drawer snippet hook</label>
-      </div>
-
-      <button type="button" onclick="generateCode('theme')">Generate layout/theme.liquid</button>
-    </form>
-    <div id="theme-output"></div>
+<div id="toolbar">
+  <div class="toolbar-left">
+    <span class="pill">Quick Actions:</span>
+    <button class="btn" data-prompt="theme">🧱 theme.liquid</button>
+    <button class="btn" data-prompt="product-template">🛍️ Product template</button>
+    <button class="btn" data-prompt="section">🧩 Section</button>
+    <button class="btn" data-prompt="snippet">🧷 Snippet</button>
+    <button class="btn" data-prompt="cart-drawer">🛒 Cart drawer</button>
   </div>
 
-  <!-- TEMPLATES JSON -->
-  <div id="template-page" class="wizard-page">
-    <h2>templates/*.json Wizard</h2>
-    <form id="template-form">
-      <div class="row">
-        <div>
-          <label>Template type:</label>
-          <select id="template-type">
-            <option value="product" selected>product</option>
-            <option value="collection">collection</option>
-            <option value="page">page</option>
-            <option value="blog">blog</option>
-            <option value="article">article</option>
-            <option value="cart">cart</option>
-            <option value="search">search</option>
-            <option value="index">index</option>
-          </select>
-          <div class="hint">Generates JSON templates compatible with Online Store 2.0.</div>
-        </div>
-        <div>
-          <label>Suffix (optional):</label>
-          <input type="text" id="template-suffix" placeholder="bundle, preorder, landing"/>
-          <div class="hint">Example: templates/product.preorder.json</div>
-        </div>
-      </div>
-
-      <label>Main section type (auto default):</label>
-      <input type="text" id="template-main-section" placeholder="main-product-custom"/>
-
-      <label>Additional sections (comma separated types):</label>
-      <textarea id="template-sections" rows="2" placeholder="featured-collection, rich-text, image-with-text"></textarea>
-
-      <button type="button" onclick="generateCode('template')">Generate templates/*.json</button>
-    </form>
-    <div id="template-output"></div>
+  <div class="toolbar-right">
+    <span class="pill" id="file-count">Files captured: 0</span>
+    <button id="export-zip" class="btn btn-warn">⬇ Export ZIP</button>
   </div>
-
-  <!-- SECTION -->
-  <div id="section-page" class="wizard-page">
-    <h2>sections/*.liquid Wizard</h2>
-    <form id="section-form">
-      <label>Section filename (without .liquid):</label>
-      <input type="text" id="section-name" placeholder="hero-video" required>
-
-      <div class="row">
-        <div>
-          <label>Settings (comma separated, format: id (type)):</label>
-          <textarea id="section-settings" rows="3" placeholder="heading (text), subheading (richtext), image (image_picker), video_url (url), padding_y (range)"></textarea>
-          <div class="hint">Types: text, textarea, richtext, image_picker, url, range, color, checkbox, select, number, collection, product, link_list...</div>
-        </div>
-        <div>
-          <label>Blocks (comma separated, format: blocktype: field (type) | field (type)):</label>
-          <textarea id="section-blocks" rows="3" placeholder="card: title (text) | text (textarea) | image (image_picker) | link (url), button: label (text) | link (url)"></textarea>
-          <div class="hint">Example block: feature: title (text) | icon (image_picker)</div>
-        </div>
-      </div>
-
-      <label>Include app blocks placeholder?</label>
-      <select id="section-appblocks">
-        <option value="true" selected>Yes</option>
-        <option value="false">No</option>
-      </select>
-
-      <button type="button" onclick="generateCode('section')">Generate sections/*.liquid</button>
-    </form>
-    <div id="section-output"></div>
-  </div>
-
-  <!-- SNIPPET -->
-  <div id="snippet-page" class="wizard-page">
-    <h2>snippets/*.liquid Wizard</h2>
-    <form id="snippet-form">
-      <label>Snippet filename (without .liquid):</label>
-      <input type="text" id="snippet-name" placeholder="price-with-badge" required>
-
-      <label>Snippet purpose:</label>
-      <select id="snippet-purpose">
-        <option value="price" selected>Price / Compare-at / Sale badge</option>
-        <option value="media">Media (image/video) helper</option>
-        <option value="product-card">Product card</option>
-        <option value="icon">Icon snippet</option>
-        <option value="generic">Generic snippet (render params)</option>
-      </select>
-
-      <label>Render params (comma separated):</label>
-      <textarea id="snippet-params" rows="2" placeholder="product, variant, show_badge (boolean), class (text)"></textarea>
-      <div class="hint">You’ll call it like: {% render 'price-with-badge', product: product, variant: product.selected_or_first_available_variant %}</div>
-
-      <button type="button" onclick="generateCode('snippet')">Generate snippets/*.liquid</button>
-    </form>
-    <div id="snippet-output"></div>
-  </div>
-
-  <!-- CART DRAWER -->
-  <div id="cart-page" class="wizard-page">
-    <h2>Cart Drawer Wizard (AJAX cart-ready)</h2>
-    <form id="cart-form">
-      <div class="row">
-        <div>
-          <label>Slide direction:</label>
-          <select id="cart-direction">
-            <option value="right" selected>Right</option>
-            <option value="left">Left</option>
-          </select>
-        </div>
-        <div>
-          <label>Cart behavior:</label>
-          <select id="cart-behavior">
-            <option value="drawer" selected>Drawer</option>
-            <option value="page">Full page cart only</option>
-          </select>
-        </div>
-      </div>
-
-      <label>Features:</label>
-      <div class="chiprow">
-        <label class="chip"><input type="checkbox" id="cart-items" checked> Items list</label>
-        <label class="chip"><input type="checkbox" id="cart-subtotal" checked> Subtotal + checkout button</label>
-        <label class="chip"><input type="checkbox" id="cart-notes"> Cart note field</label>
-        <label class="chip"><input type="checkbox" id="cart-shipping"> Shipping estimate link</label>
-        <label class="chip"><input type="checkbox" id="cart-upsell"> Product recommendations</label>
-      </div>
-
-      <label>Dynamic sources for section settings (comma separated: id (type)):</label>
-      <textarea id="cart-dynamics" rows="2" placeholder="empty_message (richtext), upsell_title (text), note_label (text)"></textarea>
-
-      <button type="button" onclick="generateCode('cart')">Generate cart drawer section + snippet + JS helpers</button>
-    </form>
-    <div id="cart-output"></div>
-  </div>
-
-  <!-- METAFIELDS HELPER -->
-  <div id="metafields-page" class="wizard-page">
-    <h2>Metafields Helper</h2>
-    <form id="mf-form">
-      <label>Owner:</label>
-      <select id="mf-owner">
-        <option value="product" selected>product</option>
-        <option value="variant">variant</option>
-        <option value="collection">collection</option>
-        <option value="shop">shop</option>
-        <option value="customer">customer</option>
-      </select>
-
-      <label>Metafields (comma separated, format: namespace.key (type)):</label>
-      <textarea id="mf-list" rows="3" placeholder="custom.subtitle (single_line_text_field), custom.hero_image (file_reference), custom.key_features (rich_text_field), custom.preorder_date (date)"></textarea>
-
-      <button type="button" onclick="generateCode('metafields')">Generate metafield Liquid access + safe fallbacks</button>
-    </form>
-    <div id="metafields-output"></div>
-  </div>
-
 </div>
 
-<script>
-  // Routing
-  function navigate(page) {
-    window.location.hash = page;
-    updatePage();
-  }
-  function updatePage() {
-    const page = window.location.hash.slice(1) || 'theme';
-    document.querySelectorAll('.wizard-page').forEach(el => el.classList.remove('active'));
-    const el = document.getElementById(page + '-page');
-    if (el) el.classList.add('active');
-    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
-    const activeLink = document.querySelector(`nav a[onclick="navigate('${page}')"]`);
-    if (activeLink) activeLink.classList.add('active');
-  }
-  window.addEventListener('hashchange', updatePage);
-  updatePage();
-
-  function slugify(s){
-    return (s||'').toString().trim().toLowerCase()
-      .replace(/['"]/g,'')
-      .replace(/[^a-z0-9]+/g,'-')
-      .replace(/-+/g,'-')
-      .replace(/^-|-$/g,'');
-  }
-
-  function titleize(slug){
-    return (slug||'').split('-').filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-  }
-
-  function parseList(raw){
-    return (raw||'').split(',').map(s=>s.trim()).filter(Boolean);
-  }
-
-  function parseIdType(item){
-    // "foo (text)"
-    const m = (item||'').match(/^(.+?)\s*\(\s*(.+?)\s*\)$/);
-    if(!m) return null;
-    return { id: m[1].trim(), type: m[2].trim() };
-  }
-
-  function parseBlocks(raw){
-    // "card: title (text) | image (image_picker), button: label (text) | link (url)"
-    const blocks = [];
-    parseList(raw).forEach(part=>{
-      const [left, right] = part.split(':').map(s=>s && s.trim());
-      if(!left || !right) return;
-      const blockType = slugify(left);
-      const settings = right.split('|').map(s=>s.trim()).filter(Boolean).map(parseIdType).filter(Boolean);
-      blocks.push({ type:blockType, name:titleize(blockType), settings });
-    });
-    return blocks;
-  }
-
-  function outputFile(type, filePath, code, instructions){
-    const outputEl = document.getElementById(type + '-output');
-    outputEl.innerHTML = '';
-
-    const meta = document.createElement('div');
-    meta.className = 'file-meta';
-    meta.innerHTML = `<div><strong>File:</strong> <code>${filePath}</code></div>
-                      <div><strong>Type:</strong> <code>${type}</code></div>`;
-
-    const pre = document.createElement('pre');
-    pre.id = 'code-output';
-    pre.textContent = code || '// No code generated — check your inputs';
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn-warn';
-    copyBtn.textContent = 'Copy to Clipboard';
-    copyBtn.onclick = () => navigator.clipboard.writeText(code || '').then(()=>alert('Copied!'));
-
-    const instr = document.createElement('div');
-    instr.id = 'instructions';
-    instr.textContent = instructions || '';
-
-    const container = document.createElement('div');
-    container.id = 'output-container';
-    container.appendChild(meta);
-    container.appendChild(pre);
-    container.appendChild(copyBtn);
-    container.appendChild(instr);
-
-    outputEl.appendChild(container);
-  }
-
-  function generateCode(type){
-    let filePath = '';
-    let code = '';
-    let instructions = '';
-
-    if(type === 'theme'){
-      const base = document.getElementById('theme-base').value;
-      const hasCSS = document.getElementById('theme-css').checked;
-      const hasJS = document.getElementById('theme-js').checked;
-      const hasFavicon = document.getElementById('theme-favicon').checked;
-
-      const featPredictive = document.getElementById('feat-predictive').checked;
-      const featLoc = document.getElementById('feat-localization').checked;
-      const featAnn = document.getElementById('feat-announcement').checked;
-      const featCartDrawer = document.getElementById('feat-cart-drawer').checked;
-
-      filePath = 'layout/theme.liquid';
-
-      const predictiveMarkup = featPredictive ? `
-  <!-- Predictive search container (wire with JS + routes/predictive_search.json) -->
-  <div class="predictive-search" data-predictive-search hidden>
-    <div class="predictive-search__results" data-predictive-search-results></div>
-  </div>` : '';
-
-      const locMarkup = featLoc ? `
-  <!-- Localization placeholder (enable markets/languages; render your localization form/selector here) -->
-  {% comment %} Example: {% render 'localization-form' %} {% endcomment %}` : '';
-
-      const annSlot = featAnn ? `
-  {% comment %} Optional announcement bar section group slot {% endcomment %}
-  {% sections 'announcement-group' %}` : '';
-
-      const cartDrawerHook = featCartDrawer ? `
-  {% render 'cart-drawer' %}` : '';
-
-      code = `<!doctype html>
-<html lang="{{ request.locale.iso_code }}">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="{{ settings.color_background | default: '#ffffff' }}">
-  <title>
-    {{ page_title | escape }}
-    {% if current_tags %} &ndash; {{ current_tags | join: ', ' }}{% endif %}
-    {% if current_page != 1 %} &ndash; Page {{ current_page }}{% endif %}
-    &ndash; {{ shop.name | escape }}
-  </title>
-
-  {% if page_description %}
-    <meta name="description" content="{{ page_description | escape }}">
-  {% endif %}
-
-  {% if canonical_url %}
-    <link rel="canonical" href="{{ canonical_url }}">
-  {% endif %}
-
-  ${hasFavicon ? `{% if settings.favicon != blank %}
-    <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
-  {% endif %}` : ''}
-
-  {{ content_for_header }}
-
-  ${hasCSS ? `{{ 'base.css' | asset_url | stylesheet_tag }}` : ''}
-  ${hasJS ? `{{ 'global.js' | asset_url | script_tag }}` : ''}
-
-  {% comment %}
-    Helpful globals:
-    - request.* (locale, path, page_type)
-    - routes.* (cart_url, cart_add_url, cart_change_url, cart_update_url, predictive_search_url)
-    - settings.* (theme settings)
-  {% endcomment %}
-</head>
-<body class="template-{{ request.page_type }}">
-
-  <a class="skip-to-content-link" href="#MainContent">Skip to content</a>
-
-  ${annSlot}
-
-  {% sections 'header-group' %}
-
-  <main id="MainContent" role="main">
-    {{ content_for_layout }}
-  </main>
-
-  {% sections 'footer-group' %}
-
-  ${cartDrawerHook}
-  ${predictiveMarkup}
-  ${locMarkup}
-
-</body>
-</html>`;
-
-      instructions =
-`How to use:
-1) Create: layout/theme.liquid
-2) Create section groups: sections/header-group.json + sections/footer-group.json (Shopify will prompt in editor)
-3) Add base.css/global.js to assets/ if enabled
-4) Add snippets/cart-drawer.liquid if enabled
-5) Add optional announcement-group if enabled`;
-
-      outputFile(type, filePath, code, instructions);
-      return;
-    }
-
-    if(type === 'template'){
-      const t = document.getElementById('template-type').value;
-      const suffix = slugify(document.getElementById('template-suffix').value);
-      const mainSection = slugify(document.getElementById('template-main-section').value) || (
-        t === 'product' ? 'main-product' :
-        t === 'collection' ? 'main-collection' :
-        t === 'cart' ? 'main-cart' :
-        t === 'search' ? 'main-search' :
-        'main-' + t
-      );
-
-      const extra = parseList(document.getElementById('template-sections').value).map(slugify).filter(Boolean);
-
-      filePath = suffix ? `templates/${t}.${suffix}.json` : `templates/${t}.json`;
-
-      const sectionsObj = {};
-      const order = [];
-
-      sectionsObj.main = { type: mainSection, settings: {} };
-      order.push('main');
-
-      extra.forEach((secType, idx)=>{
-        const key = `sec_${idx+1}`;
-        sectionsObj[key] = { type: secType, settings: {} };
-        order.push(key);
-      });
-
-      code = JSON.stringify({ name: `${t}${suffix?'.'+suffix:''}`, sections: sectionsObj, order }, null, 2);
-
-      instructions =
-`How to use:
-1) Create the JSON file exactly at: ${filePath}
-2) Ensure you have sections/${mainSection}.liquid (and any extra section types you listed)
-3) In Shopify admin: Online Store → Themes → Customize → choose the template for a product/page/etc`;
-
-      outputFile(type, filePath, code, instructions);
-      return;
-    }
-
-    if(type === 'section'){
-      const rawName = document.getElementById('section-name').value;
-      const name = slugify(rawName) || 'custom-section';
-      const settings = parseList(document.getElementById('section-settings').value).map(parseIdType).filter(Boolean);
-      const blocks = parseBlocks(document.getElementById('section-blocks').value);
-      const includeAppBlocks = document.getElementById('section-appblocks').value === 'true';
-
-      filePath = `sections/${name}.liquid`;
-
-      const schemaSettings = settings.map(s => `    { "type": "${s.type}", "id": "${s.id}", "label": "${titleize(slugify(s.id))}" }`).join(',\n');
-
-      const schemaBlocks = blocks.map(b=>{
-        const bSettings = (b.settings||[]).map(s=>`        { "type": "${s.type}", "id": "${s.id}", "label": "${titleize(slugify(s.id))}" }`).join(',\n');
-        return `    {
-      "type": "${b.type}",
-      "name": "${b.name}",
-      "settings": [
-${bSettings || '        { "type": "text", "id": "title", "label": "Title" }'}
-      ]
-    }`;
-      }).join(',\n');
-
-      const appBlock = includeAppBlocks ? `,
-    { "type": "@app" }` : '';
-
-      code = `{% comment %} sections/${name}.liquid {% endcomment %}
-
-<section class="${name}" data-section-id="{{ section.id }}">
-  <div class="page-width">
-    {% if section.settings.heading != blank %}
-      <h2 class="${name}__heading">{{ section.settings.heading }}</h2>
-    {% endif %}
-
-    {% if section.settings.subheading != blank %}
-      <div class="${name}__subheading rte">{{ section.settings.subheading }}</div>
-    {% endif %}
-
-    {% if section.settings.image != blank %}
-      <div class="${name}__media">
-        {{ section.settings.image | image_url: width: 1800 | image_tag: loading: 'lazy' }}
-      </div>
-    {% endif %}
-
-    {% if section.settings.video_url != blank %}
-      <div class="${name}__video">
-        <a href="{{ section.settings.video_url }}" target="_blank" rel="noopener">Watch video</a>
-      </div>
-    {% endif %}
-
-    {% if section.blocks.size > 0 %}
-      <div class="${name}__blocks">
-        {% for block in section.blocks %}
-          <div class="${name}__block" {{ block.shopify_attributes }}>
-            {% case block.type %}
-              {% default %}
-                <div class="rte">
-                  {% if block.settings.title != blank %}<p><strong>{{ block.settings.title }}</strong></p>{% endif %}
-                  {% if block.settings.text != blank %}<p>{{ block.settings.text }}</p>{% endif %}
-                </div>
-            {% endcase %}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  </div>
-</section>
-
-{% schema %}
-{
-  "name": "${titleize(name)}",
-  "settings": [
-${schemaSettings || '    { "type": "text", "id": "heading", "label": "Heading" }'}
-  ],
-  "blocks": [
-${schemaBlocks || `    { "type": "content", "name": "Content", "settings": [
-      { "type": "text", "id": "title", "label": "Title" },
-      { "type": "textarea", "id": "text", "label": "Text" }
-    ] }`}${appBlock}
-  ],
-  "presets": [
-    { "name": "${titleize(name)}" }
-  ]
-}
-{% endschema %}`;
-
-      instructions =
-`How to use:
-1) Create: ${filePath}
-2) If you referenced IDs like heading/subheading/image/video_url, add them in the settings textarea so schema matches
-3) Add the section to a template via theme editor or templates/*.json`;
-
-      outputFile(type, filePath, code, instructions);
-      return;
-    }
-
-    if(type === 'snippet'){
-      const rawName = document.getElementById('snippet-name').value;
-      const name = slugify(rawName) || 'custom-snippet';
-      const purpose = document.getElementById('snippet-purpose').value;
-      const params = parseList(document.getElementById('snippet-params').value);
-
-      filePath = `snippets/${name}.liquid`;
-
-      const renderExample = `{% render '${name}', ${params.filter(Boolean).map(p=>{
-        const key = p.split('(')[0].trim();
-        return `${key}: ${key}`;
-      }).join(', ')} %}`.replace(',  %}',' %}');
-
-      if(purpose === 'price'){
-        code = `{% comment %} snippets/${name}.liquid {% endcomment %}
-{%- liquid
-  assign p = product | default: nil
-  assign v = variant | default: p.selected_or_first_available_variant
-  assign show_badge = show_badge | default: true
-  assign cls = class | default: ''
-  assign price = v.price | default: p.price
-  assign compare = v.compare_at_price | default: p.compare_at_price
-  assign on_sale = compare > price
--%}
-
-<div class="price ${name} {{ cls }}">
-  <span class="price__current">{{ price | money }}</span>
-  {% if on_sale %}
-    <span class="price__compare" aria-hidden="true"><s>{{ compare | money }}</s></span>
-    {% if show_badge %}
-      <span class="price__badge" role="status">Sale</span>
-    {% endif %}
-  {% endif %}
-</div>`;
-      } else if(purpose === 'product-card'){
-        code = `{% comment %} snippets/${name}.liquid {% endcomment %}
-{%- liquid
-  assign p = product
-  assign img = p.featured_image
-  assign v = p.selected_or_first_available_variant
--%}
-<a class="product-card ${name}" href="{{ p.url }}">
-  {% if img %}
-    {{ img | image_url: width: 900 | image_tag: loading: 'lazy' }}
-  {% endif %}
-  <div class="product-card__info">
-    <h3 class="product-card__title">{{ p.title }}</h3>
-    {% render 'price-with-badge', product: p, variant: v %}
-  </div>
-</a>`;
-      } else if(purpose === 'media'){
-        code = `{% comment %} snippets/${name}.liquid {% endcomment %}
-{%- liquid
-  assign img = image
-  assign w = width | default: 1600
-  assign alt = alt | default: ''
--%}
-{% if img %}
-  {{ img | image_url: width: w | image_tag: loading: 'lazy', alt: alt }}
-{% endif %}`;
-      } else if(purpose === 'icon'){
-        code = `{% comment %} snippets/${name}.liquid {% endcomment %}
-<svg class="${name} {{ class | default: '' }}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-  <path d="M12 2l10 20H2L12 2z"></path>
-</svg>`;
-      } else {
-        code = `{% comment %} snippets/${name}.liquid {% endcomment %}
-{%- comment -%}
-Render params you can pass:
-${params.map(p=>' - '+p).join('\n') || ' - product, class, etc.'}
-Example:
-${renderExample}
-{%- endcomment -%}
-
-<div class="${name} {{ class | default: '' }}">
-  {% if title != blank %}<h3>{{ title }}</h3>{% endif %}
-  {{ content }}
-</div>`;
-      }
-
-      instructions =
-`How to use:
-1) Create: ${filePath}
-2) Call via: {% render '${name}', ...params %}
-3) Prefer {% render %} over {% include %} (scope-safe)`;
-
-      outputFile(type, filePath, code, instructions);
-      return;
-    }
-
-    if(type === 'cart'){
-      const direction = document.getElementById('cart-direction').value;
-      const behavior = document.getElementById('cart-behavior').value;
-
-      const hasItems = document.getElementById('cart-items').checked;
-      const hasSubtotal = document.getElementById('cart-subtotal').checked;
-      const hasNotes = document.getElementById('cart-notes').checked;
-      const hasShipping = document.getElementById('cart-shipping').checked;
-      const hasUpsell = document.getElementById('cart-upsell').checked;
-
-      const dynamics = parseList(document.getElementById('cart-dynamics').value).map(parseIdType).filter(Boolean);
-
-      // We'll output one combined bundle to paste into 3 files.
-      filePath = `Bundle: sections/cart-drawer.liquid + snippets/cart-drawer.liquid + assets/cart-drawer.js`;
-
-      const schemaSettings = dynamics.map(d => `    { "type": "${d.type}", "id": "${d.id}", "label": "${titleize(slugify(d.id))}" }`).join(',\n');
-
-      const sectionLiquid = `{% comment %} sections/cart-drawer.liquid {% endcomment %}
-<div class="cart-drawer-host" data-section-id="{{ section.id }}">
-  {% render 'cart-drawer', section: section %}
+<div id="chat-container"></div>
+
+<div id="input-area">
+  <textarea id="user-input" rows="1" placeholder="Tell me what you want to build (Liquid/sections/snippets/templates)…"></textarea>
+  <button id="send-btn" disabled title="Send">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    </svg>
+  </button>
 </div>
 
-{% schema %}
-{
-  "name": "Cart drawer",
-  "settings": [
-${schemaSettings || '    { "type": "richtext", "id": "empty_message", "label": "Empty cart message" }'}
-  ],
-  "presets": [{ "name": "Cart drawer" }]
-}
-{% endschema %}`;
+<script type="module">
+  // WebLLM TinyLlama pinned import
+  import { MLCEngine } from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.80/+esm";
 
-      const drawerSnippet = `{% comment %} snippets/cart-drawer.liquid {% endcomment %}
-{%- liquid
-  assign cart_obj = cart
-  assign empty_message = section.settings.empty_message | default: '<p>Your cart is empty.</p>'
--%}
+  const MODEL_ID = "TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC";
 
-<div class="cart-drawer drawer--from-${direction}" data-cart-drawer hidden>
-  <div class="cart-drawer__overlay" data-cart-drawer-overlay></div>
+  const statusEl      = document.getElementById("status");
+  const chatContainer = document.getElementById("chat-container");
+  const userInput     = document.getElementById("user-input");
+  const sendBtn       = document.getElementById("send-btn");
+  const lowVramEl     = document.getElementById("low-vram");
+  const themeToggle   = document.getElementById("theme-toggle");
+  const resetBtn      = document.getElementById("reset-chat");
+  const exportBtn     = document.getElementById("export-zip");
+  const fileCountEl   = document.getElementById("file-count");
 
-  <aside class="cart-drawer__panel" role="dialog" aria-modal="true" aria-label="Cart">
-    <header class="cart-drawer__header">
-      <h2>Cart</h2>
-      <button type="button" aria-label="Close" data-cart-drawer-close>&times;</button>
-    </header>
+  let engine = null;
+  let engineReady = false;
+  let generating = false;
 
-    <div class="cart-drawer__body" data-cart-drawer-body>
-      {% if cart_obj.item_count == 0 %}
-        <div class="rte cart-drawer__empty">{{ empty_message }}</div>
-      {% else %}
-        ${hasItems ? `{% for item in cart_obj.items %}
-          <div class="cart-item" data-line-item-key="{{ item.key }}">
-            <div class="cart-item__media">
-              {% if item.image %}
-                {{ item.image | image_url: width: 160 | image_tag: loading: 'lazy' }}
-              {% endif %}
-            </div>
-            <div class="cart-item__info">
-              <a href="{{ item.url }}">{{ item.product.title }}</a>
-              {% if item.variant.title != 'Default Title' %}<div class="muted">{{ item.variant.title }}</div>{% endif %}
-              <div class="muted">{{ item.final_line_price | money }}</div>
+  // Captured generated files (from assistant)
+  // Map<path, content>
+  const fileMap = new Map();
 
-              <div class="cart-item__qty">
-                <button type="button" data-qty-change data-line="{{ forloop.index }}" data-delta="-1">-</button>
-                <input type="number" min="0" value="{{ item.quantity }}" data-qty-input data-line="{{ forloop.index }}">
-                <button type="button" data-qty-change data-line="{{ forloop.index }}" data-delta="1">+</button>
-              </div>
-            </div>
-          </div>
-        {% endfor %}` : ''}
-
-        ${hasNotes ? `<div class="cart-note">
-          <label for="CartNote">Note</label>
-          <textarea id="CartNote" name="note" form="cartDrawerForm">{{ cart_obj.note }}</textarea>
-        </div>` : ''}
-
-        ${hasUpsell ? `<div class="cart-upsell">
-          <h3>{{ section.settings.upsell_title | default: 'You may also like' }}</h3>
-          <div data-cart-upsell>
-            {% comment %} Option A: use recommendations API in JS; Option B: use a collection setting {% endcomment %}
-          </div>
-        </div>` : ''}
-
-      {% endif %}
-    </div>
-
-    <footer class="cart-drawer__footer">
-      ${hasSubtotal ? `<div class="cart-drawer__subtotal">
-        <span>Subtotal</span>
-        <strong>{{ cart_obj.total_price | money }}</strong>
-      </div>` : ''}
-
-      ${hasShipping ? `<a class="cart-drawer__shipping" href="{{ routes.cart_url }}">Estimate shipping</a>` : ''}
-
-      <form id="cartDrawerForm" action="{{ routes.cart_url }}" method="post">
-        <button type="submit" name="checkout" class="cart-drawer__checkout">Checkout</button>
-        ${behavior === 'page' ? '' : `<a class="cart-drawer__viewcart" href="{{ routes.cart_url }}">View cart</a>`}
-      </form>
-    </footer>
-  </aside>
-</div>`;
-
-      const js = `// assets/cart-drawer.js
-(function(){
-  function qs(sel, root){ return (root||document).querySelector(sel); }
-  function qsa(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
-
-  function openDrawer(){
-    var d = qs('[data-cart-drawer]');
-    if(!d) return;
-    d.hidden = false;
-    d.setAttribute('open','');
-    document.documentElement.classList.add('cart-drawer-open');
+  function updateFileCount(){
+    fileCountEl.textContent = `Files captured: ${fileMap.size}`;
   }
 
-  function closeDrawer(){
-    var d = qs('[data-cart-drawer]');
-    if(!d) return;
-    d.hidden = true;
-    d.removeAttribute('open');
-    document.documentElement.classList.remove('cart-drawer-open');
+  function autoResize(){
+    userInput.style.height = "auto";
+    userInput.style.height = Math.min(userInput.scrollHeight, 180) + "px";
   }
+  userInput.addEventListener("input", autoResize);
 
-  async function cartChange(line, quantity){
-    const res = await fetch(window.Shopify?.routes?.root + 'cart/change.js', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
-      body: JSON.stringify({ line: Number(line), quantity: Number(quantity) })
-    });
-    return res.json();
-  }
-
-  async function cartUpdateNote(note){
-    const res = await fetch(window.Shopify?.routes?.root + 'cart/update.js', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
-      body: JSON.stringify({ note: note })
-    });
-    return res.json();
-  }
-
-  function bind(){
-    document.addEventListener('click', function(e){
-      const openBtn = e.target.closest('[data-open-cart-drawer]');
-      if(openBtn){ e.preventDefault(); openDrawer(); return; }
-
-      const closeBtn = e.target.closest('[data-cart-drawer-close], [data-cart-drawer-overlay]');
-      if(closeBtn){ e.preventDefault(); closeDrawer(); return; }
-
-      const qtyBtn = e.target.closest('[data-qty-change]');
-      if(qtyBtn){
-        e.preventDefault();
-        const line = qtyBtn.getAttribute('data-line');
-        const delta = Number(qtyBtn.getAttribute('data-delta')||0);
-        const input = qs('[data-qty-input][data-line="'+line+'"]');
-        const current = Number(input && input.value ? input.value : 0);
-        const next = Math.max(0, current + delta);
-        cartChange(line, next).then(()=>location.reload());
-        return;
-      }
-    });
-
-    document.addEventListener('change', function(e){
-      const qtyInput = e.target.closest('[data-qty-input]');
-      if(qtyInput){
-        const line = qtyInput.getAttribute('data-line');
-        const next = Math.max(0, Number(qtyInput.value||0));
-        cartChange(line, next).then(()=>location.reload());
-        return;
-      }
-
-      const note = e.target.closest('#CartNote');
-      if(note){
-        cartUpdateNote(note.value).catch(()=>{});
-      }
-    });
-  }
-
-  bind();
-  window.CartDrawer = { open: openDrawer, close: closeDrawer };
-})();`;
-
-      code =
-`/* FILE 1: sections/cart-drawer.liquid */\n${sectionLiquid}\n\n` +
-`/* FILE 2: snippets/cart-drawer.liquid */\n${drawerSnippet}\n\n` +
-`/* FILE 3: assets/cart-drawer.js */\n${js}`;
-
-      instructions =
-`How to use:
-1) Create these files:
-   - sections/cart-drawer.liquid
-   - snippets/cart-drawer.liquid
-   - assets/cart-drawer.js
-2) Include the JS in layout/theme.liquid (or global.js import):
-   {{ 'cart-drawer.js' | asset_url | script_tag }}
-3) Add an opener anywhere:
-   <a href="{{ routes.cart_url }}" data-open-cart-drawer>Open cart</a>
-4) Note: AJAX endpoints cart/change.js and cart/update.js work on storefront.`
-
-      outputFile(type, filePath, code, instructions);
-      return;
+  userInput.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      sendMessage();
     }
+  });
 
-    if(type === 'metafields'){
-      const owner = document.getElementById('mf-owner').value;
-      const list = parseList(document.getElementById('mf-list').value);
+  sendBtn.addEventListener("click", sendMessage);
 
-      filePath = 'Liquid snippet (paste anywhere)';
+  // Theme toggle persistence
+  (function initTheme(){
+    const saved = localStorage.getItem("shopify_assistant_theme");
+    const theme = (saved === "light" || saved === "dark") ? saved : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  themeToggle.addEventListener("click", ()=>{
+    const current = document.documentElement.getAttribute("data-theme") || "light";
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("shopify_assistant_theme", next);
+  });
 
-      // Build safe access examples
-      const ownerVar =
-        owner === 'product' ? 'product' :
-        owner === 'variant' ? 'variant' :
-        owner === 'collection' ? 'collection' :
-        owner === 'shop' ? 'shop' :
-        'customer';
+  resetBtn.addEventListener("click", ()=>{
+    if(generating) return;
+    chatContainer.innerHTML = "";
+    fileMap.clear();
+    updateFileCount();
+    messages = [ systemMessage() ];
+    addMessage("assistant",
+`Reset complete ✅
 
-      const lines = [];
-      lines.push(`{%- comment -%} Metafields helper for ${ownerVar} {%- endcomment -%}`);
-      lines.push(`{%- assign obj = ${ownerVar} -%}`);
+Tell me what you want:
+- "Create a Dawn-like base theme with header/footer groups"
+- "Build a product template with metafields + sticky ATC"
+- "Create a cart drawer with ajax updates"
+- "Make a reusable section with blocks + schema"
 
-      list.forEach(item=>{
-        const m = item.match(/^([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*\(\s*([^)]+)\s*\)\s*$/);
-        if(!m) return;
-        const ns = m[1], key = m[2], t = m[3].trim();
+When you want exportable files, ask:
+**"Output as files"**`);
+  });
 
-        // Shopify metafields generally use .value for typed values
-        lines.push(``);
-        lines.push(`{%- assign mf_${ns}_${key} = obj.metafields.${ns}.${key} -%}`);
-        lines.push(`{%- if mf_${ns}_${key} != blank -%}`);
-        if(t.includes('file_reference') || t.includes('image') || t.includes('file')){
-          lines.push(`  {%- assign file_obj = mf_${ns}_${key}.value -%}`);
-          lines.push(`  {% if file_obj != blank %}{{ file_obj | image_url: width: 1800 | image_tag: loading: 'lazy' }}{% endif %}`);
-        } else if(t.includes('rich_text') || t.includes('richtext')){
-          lines.push(`  <div class="rte">{{ mf_${ns}_${key}.value }}</div>`);
-        } else if(t.includes('date')){
-          lines.push(`  <p>{{ mf_${ns}_${key}.value | date: "%B %d, %Y" }}</p>`);
-        } else {
-          lines.push(`  <p>{{ mf_${ns}_${key}.value }}</p>`);
+  // ---------- Shopify Brain (system prompt) ----------
+  function systemMessage(){
+    return {
+      role: "system",
+      content: `
+You are "Shopify Assistant", an expert Shopify theme engineer.
+Goal: generate FULLY FUNCTIONAL Shopify theme code (Online Store 2.0) using Liquid + JSON templates + sections + snippets + assets JS/CSS.
+
+Hard rules:
+1) When user asks for theme files, output in FILE BLOCKS using this exact format so the app can export as ZIP:
+
+\`\`\`file: layout/theme.liquid
+...content...
+\`\`\`
+
+\`\`\`file: templates/product.json
+...content...
+\`\`\`
+
+2) Prefer {% render %} over {% include %}. Use section groups: header-group, footer-group.
+3) Use routes.* for URLs, and cart endpoints /cart/add.js /cart/change.js /cart/update.js as needed.
+4) Use safe fallbacks (blank checks). Use settings schema correctly.
+5) Shopify limitations:
+   - Checkout is not Liquid-editable on most plans (use checkout extensibility if asked; otherwise provide storefront-only code).
+6) Keep outputs concise but complete and production-ready.
+
+If user requests "output as files", always produce the necessary file blocks.
+`
+    };
+  }
+
+  let messages = [ systemMessage() ];
+
+  // ---------- Chat helpers ----------
+  function addMessage(role, content){
+    const div = document.createElement("div");
+    div.className = `message ${role}`;
+    div.innerHTML = marked.parse(content || "");
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    enhanceCodeBlocks(div);
+    captureFilesFromNode(div);
+    return div;
+  }
+
+  function setStatus(text){
+    statusEl.textContent = text;
+  }
+
+  // ---------- File capture ----------
+  function captureFilesFromText(text){
+    // Look for code fences that begin with: ```file: path
+    // and capture until closing ```
+    const re = /```file:\s*([^\n\r]+)\s*[\r\n]+([\s\S]*?)```/g;
+    let m;
+    let count = 0;
+    while((m = re.exec(text)) !== null){
+      const path = (m[1] || "").trim();
+      const body = (m[2] || "").replace(/\s+$/,""); // trim end
+      if(path && body){
+        fileMap.set(path, body);
+        count++;
+      }
+    }
+    if(count) updateFileCount();
+  }
+
+  function captureFilesFromNode(container){
+    // marked creates <pre><code> blocks; we'll re-read raw markdown from them is hard,
+    // so we also capture from the assistant's plain text while streaming (handled there).
+    // Here we only keep count UI in sync.
+    updateFileCount();
+  }
+
+  // ---------- Code box enhancer ----------
+  function enhanceCodeBlocks(container){
+    const blocks = container.querySelectorAll("pre > code");
+    blocks.forEach(code=>{
+      const pre = code.parentElement;
+      if(pre.parentElement && pre.parentElement.classList.contains("codebox")) return;
+
+      const src = code.textContent || "";
+      const langClass = Array.from(code.classList).find(c => c.startsWith("language-"));
+      const lang = langClass ? langClass.replace("language-","").toUpperCase() : "CODE";
+
+      // file header sniff for convenience
+      const firstLine = src.split("\n")[0] || "";
+      const fileHint = firstLine.startsWith("file:") ? firstLine.slice(5).trim() : "";
+
+      const wrap = document.createElement("div");
+      wrap.className = "codebox";
+
+      const header = document.createElement("div");
+      header.className = "codebox-header";
+
+      const left = document.createElement("div");
+      left.innerHTML = `<strong>${lang}</strong>${fileHint ? ` <span class="muted">• ${fileHint}</span>` : ""}`;
+
+      const actions = document.createElement("div");
+      actions.className = "codebox-actions";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "codebox-btn";
+      copyBtn.textContent = "Copy";
+
+      copyBtn.addEventListener("click", async ()=>{
+        try{
+          await navigator.clipboard.writeText(src);
+          copyBtn.textContent = "Copied";
+          setTimeout(()=>copyBtn.textContent="Copy", 900);
+        }catch{
+          copyBtn.textContent = "Copy failed";
+          setTimeout(()=>copyBtn.textContent="Copy", 900);
         }
-        lines.push(`{%- endif -%}`);
       });
 
-      code = lines.join('\n');
+      actions.appendChild(copyBtn);
+      header.appendChild(left);
+      header.appendChild(actions);
 
-      instructions =
-`Notes:
-- Use obj.metafields.namespace.key.value for typed metafields (most modern metafields).
-- For legacy untyped metafields, you may see string output without .value.
-- Connect dynamic sources in the theme editor using the "database" icon next to a setting.`;
+      wrap.appendChild(header);
+      wrap.appendChild(pre.cloneNode(true));
+      pre.replaceWith(wrap);
+    });
+  }
 
-      outputFile(type, filePath, code, instructions);
-      return;
+  // ---------- Quick prompts ----------
+  const quickPrompts = {
+    "theme": `Output as files: Create a Dawn-like Online Store 2.0 base theme skeleton.
+Requirements:
+- layout/theme.liquid with content_for_header, content_for_layout, routes usage.
+- sections/header-group.json and sections/footer-group.json (section groups).
+- minimal sections: main-product.liquid, main-collection.liquid, main-cart.liquid.
+- snippets: price.liquid, product-card.liquid, icon.liquid
+- assets: base.css, global.js (basic).
+Use safe fallbacks and production-ready structure.`,
+    "product-template": `Output as files: Create templates/product.custom.json + section sections/main-product-custom.liquid.
+Features:
+- media gallery area, product form, quantity, ATC button
+- dynamic metafields example: product.metafields.custom.subtitle, product.metafields.custom.key_features
+- variant selector
+- uses snippets/price.liquid
+Also include any required assets JS for variant change.`,
+    "section": `Output as files: Create a reusable section sections/hero-video.liquid with schema.
+Settings: heading(text), subheading(richtext), video_url(url), image(image_picker), button_label(text), button_link(url)
+Blocks: card: title(text) | text(textarea) | image(image_picker) | link(url)
+Include @app blocks.`,
+    "snippet": `Output as files: Create snippet snippets/price-with-badge.liquid
+Inputs: product, variant, show_badge, class
+Must show compare-at if on sale and a Sale badge.`,
+    "cart-drawer": `Output as files: Build an AJAX cart drawer:
+- snippets/cart-drawer.liquid
+- sections/cart-drawer.liquid with schema (empty message, upsell title)
+- assets/cart-drawer.js
+Must support qty change with /cart/change.js and note with /cart/update.js.
+Include an opener attribute: data-open-cart-drawer.`
+  };
+
+  document.querySelectorAll("[data-prompt]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.getAttribute("data-prompt");
+      const prompt = quickPrompts[key];
+      if(!prompt) return;
+      userInput.value = prompt;
+      autoResize();
+      userInput.focus();
+    });
+  });
+
+  // ---------- Load TinyLlama ----------
+  async function loadModel(){
+    setStatus("Loading TinyLlama… downloading model files");
+    sendBtn.disabled = true;
+    userInput.disabled = true;
+
+    try{
+      engine = new MLCEngine({
+        initProgressCallback: (report)=>{
+          setStatus(report?.text || "Loading…");
+        }
+      });
+
+      const chatOpts = lowVramEl.checked ? {
+        context_window_size: 1024,
+        sliding_window_size: -1,
+        attention_sink_size: 128,
+        temperature: 0.7
+      } : {
+        context_window_size: 2048,
+        sliding_window_size: -1,
+        attention_sink_size: 160,
+        temperature: 0.7
+      };
+
+      await engine.reload(MODEL_ID, chatOpts);
+
+      engineReady = true;
+      setStatus(`Ready — Shopify Assistant (TinyLlama) ${lowVramEl.checked ? "(Low VRAM)" : "(Fast Mode)"}`);
+      sendBtn.disabled = false;
+      userInput.disabled = false;
+      userInput.focus();
+
+      addMessage("assistant",
+`Loaded **Shopify Assistant (TinyLlama)** ✅
+
+Ask me to generate Shopify theme code.
+Tip: say **"Output as files"** to get exportable ZIP-ready file blocks.`);
+    }catch(err){
+      engineReady = false;
+      setStatus("Error loading model: " + (err?.message || String(err)));
+      addMessage("assistant", "Model load failed. Try enabling **Low VRAM** and refresh.");
+      console.error(err);
     }
   }
+
+  lowVramEl.addEventListener("change", ()=>{
+    if(generating) return;
+    // reload with new opts
+    loadModel();
+  });
+
+  // ---------- Send message ----------
+  async function sendMessage(){
+    const text = (userInput.value || "").trim();
+    if(!text || generating) return;
+
+    addMessage("user", text);
+    userInput.value = "";
+    autoResize();
+    userInput.disabled = true;
+    sendBtn.disabled = true;
+    generating = true;
+
+    messages.push({ role: "user", content: text });
+
+    const replyDiv = addMessage("assistant", "");
+    let fullText = "";
+
+    try{
+      if(engineReady && navigator.gpu){
+        const stream = await engine.chat.completions.create({
+          messages,
+          stream: true,
+          temperature: 0.7,
+          max_gen_len: lowVramEl.checked ? 420 : 650
+        });
+
+        for await (const chunk of stream){
+          const delta = chunk?.choices?.[0]?.delta?.content ?? "";
+          if(!delta) continue;
+          fullText += delta;
+          replyDiv.innerHTML = marked.parse(fullText);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        messages.push({ role:"assistant", content: fullText });
+        enhanceCodeBlocks(replyDiv);
+
+        // capture files (ZIP exporter uses these)
+        captureFilesFromText(fullText);
+
+      } else {
+        replyDiv.textContent = "WebGPU not available. Use a WebGPU-capable browser/device.";
+      }
+    }catch(err){
+      const msg = err?.message || String(err);
+      replyDiv.textContent = "Error: " + msg;
+      console.error(err);
+    }
+
+    userInput.disabled = false;
+    sendBtn.disabled = !engineReady;
+    generating = false;
+    userInput.focus();
+  }
+
+  // ---------- Export ZIP ----------
+  exportBtn.addEventListener("click", async ()=>{
+    if(fileMap.size === 0){
+      alert("No files captured yet.\n\nAsk the assistant: “Output as files …” so it produces ```file: path``` blocks.");
+      return;
+    }
+    try{
+      const zip = new JSZip();
+      for(const [path, content] of fileMap.entries()){
+        zip.file(path, content);
+      }
+      const blob = await zip.generateAsync({ type:"blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "shopify-theme.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }catch(e){
+      alert("Export failed: " + (e?.message || String(e)));
+    }
+  });
+
+  // Boot
+  addMessage("assistant", "Initializing…");
+  loadModel();
+  updateFileCount();
 </script>
 </body>
 </html>
