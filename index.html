@@ -6,7 +6,9 @@
   <title>Shopify Assistant (TinyLlama)</title>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <!-- ✅ Use JSZip from heltschl.org (global window.JSZip) -->
+  <script src="https://heltschl.org/_js/jszip/jszip.min.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -298,7 +300,7 @@
   <textarea id="user-input" rows="1" placeholder="Tell me what you want to build (Liquid/sections/snippets/templates)…"></textarea>
   <button id="send-btn" disabled title="Send">
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <line x1="22" y1="2" x2="11" y1="13"></line>
       <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
     </svg>
   </button>
@@ -424,8 +426,7 @@ If user requests "output as files", always produce the necessary file blocks.
     statusEl.textContent = text;
   }
 
-  // ---------- FILE CAPTURE (robust) ----------
-  // Captures from raw assistant text while streaming + on completion.
+  // ---------- FILE CAPTURE ----------
   function captureFilesFromText(text){
     const re = /```file:\s*([^\n\r]+)\s*[\r\n]+([\s\S]*?)```/g;
     let m, count = 0;
@@ -614,11 +615,10 @@ Tip: say **"Output as files"** to get exportable ZIP-ready file blocks.`);
           if(!delta) continue;
           fullText += delta;
 
-          // stream render
           replyDiv.innerHTML = marked.parse(fullText);
           chatContainer.scrollTop = chatContainer.scrollHeight;
 
-          // continuously capture any completed file blocks
+          // continuously capture completed file blocks during streaming
           captureFilesFromText(fullText);
         }
 
@@ -642,62 +642,60 @@ Tip: say **"Output as files"** to get exportable ZIP-ready file blocks.`);
     userInput.focus();
   }
 
-  // ---------- Base64 ZIP Export (NO server) ----------
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("Failed to read ZIP blob"));
-      reader.onload = () => {
-        const dataUrl = String(reader.result || "");
-        const base64 = dataUrl.split(",")[1] || "";
-        resolve(base64);
-      };
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  async function exportZipAsBase64(zipName = "shopify-theme.zip"){
+  // ✅✅✅ WORKING ZIP DOWNLOAD (BLOB URL) using heltschl JSZip
+  // This is the most reliable (no Base64 URL limits, no popup blockers)
+  async function exportZip(zipName = "shopify-theme.zip"){
     if(fileMap.size === 0){
       alert("No files captured yet.\n\nAsk the assistant: “Output as files …” so it produces ```file: path``` blocks.");
       return;
     }
 
-    // Ensure we capture all file blocks visible in the chat HTML too (as backup)
-    // (Main source is raw streamed text; this is extra safety.)
-    const allText = chatContainer.innerText || "";
-    captureFilesFromText(allText);
+    // Make sure JSZip is available from heltschl
+    const JSZipRef = window.JSZip;
+    if(!JSZipRef){
+      alert("JSZip not found. Make sure this loads:\nhttps://heltschl.org/_js/jszip/jszip.min.js");
+      return;
+    }
 
-    const zip = new JSZip();
+    setStatus(`Building ZIP… (${fileMap.size} files)`);
+
+    // Extra safety: capture any file blocks in visible chat text (if any)
+    captureFilesFromText(chatContainer.innerText || "");
+
+    const zip = new JSZipRef();
     for(const [path, content] of fileMap.entries()){
       const cleanPath = String(path || "").replace(/^\/+/, "");
       zip.file(cleanPath, content == null ? "" : String(content));
     }
 
-    setStatus(`Exporting ZIP… (${fileMap.size} files)`);
-    const blob = await zip.generateAsync({ type:"blob" });
-    const base64 = await blobToBase64(blob);
+    try{
+      const blob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      });
 
-    // Trigger download with Base64 data URL (no server)
-    const dataUrl = `data:application/zip;base64,${base64}`;
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = zipName;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+      const url = URL.createObjectURL(blob);
 
-    setStatus(`Downloaded ZIP (${fileMap.size} files) ✅`);
-    return base64;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = zipName;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+      setStatus(`ZIP downloaded ✅ (${fileMap.size} files)`);
+    }catch(e){
+      console.error(e);
+      setStatus("Export failed.");
+      alert("Export failed: " + (e?.message || String(e)));
+    }
   }
 
-  exportBtn.addEventListener("click", async ()=>{
-    try{
-      await exportZipAsBase64("shopify-theme.zip");
-    }catch(e){
-      alert("Export failed: " + (e?.message || String(e)));
-      setStatus("Export failed.");
-    }
+  exportBtn.addEventListener("click", ()=>{
+    exportZip("shopify-theme.zip");
   });
 
   // Boot
